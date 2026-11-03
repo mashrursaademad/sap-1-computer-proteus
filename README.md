@@ -58,35 +58,37 @@ The **Controller-Sequencer** coordinates the operation of these modules by gener
 
 ![6-Bit SAP-1 System Architecture](results/figures/system_architecture.png)
 
+The implemented architecture uses a 6-bit datapath with 3-bit memory addressing, providing 8 addressable 6-bit memory locations. The Program Counter and Memory Address Register therefore operate on 3-bit addresses, while the main registers and arithmetic datapath operate on 6-bit data.
+
 The architecture can be summarized as:
 
 ```text
-Program Counter
-      │
-      ▼
-Memory Address Register
-      │
-      ▼
-     RAM
-      │
-      ▼
-System Bus ◄──────────────► Instruction Register
-    ▲   ▲                         │
-    │   │                         ▼
-    │   │                  Controller-Sequencer
-    │   │                         │
-    │   └──── Control Signals ────┘
-    │
-    ├────────► Accumulator
-    │               │
-    │               ▼
-    │              ALU ◄──── B Register
-    │               │
-    │               ▼
-    └────────── System Bus
-                    │
-                    ▼
-              Output Register
+Program Counter (3-bit)
+        │
+        ▼
+Memory Address Register (3-bit)
+        │
+        ▼
+     8×6 RAM
+        │
+        ▼
+  6-bit System Bus ◄────────────► Instruction Register (6-bit)
+        ▲                               │
+        │                               ▼
+        │                        Controller-Sequencer
+        │                               │
+        │────── Control Signals ────────┘
+        │
+        ├────────► Accumulator (6-bit)
+        │                 │
+        │                 ▼
+        │            ALU (6-bit) ◄──── B Register (6-bit)
+        │                 │
+        │                 ▼
+        └────────── 6-bit System Bus
+                          │
+                          ▼
+                   Output Register (6-bit)
 ```
 
 ---
@@ -158,71 +160,86 @@ The Clock Pulse Generator provides the timing signal required to synchronize seq
 
 It controls the timing of registers, counters, and the Controller-Sequencer so that operations occur in the required sequence.
 
-![Clock Pulse Generator](results/figures/clock.png)
+![Clock Pulse Generator](results/figures/modules/clock.png)
 
 ---
 
 ### 5.2 Program Counter
 
-The Program Counter maintains the address required for sequential instruction execution.
+The **3-bit Program Counter** maintains the address required for sequential instruction execution. Its 3-bit output provides addresses from `000` to `111`, corresponding to the eight addressable memory locations of the system.
 
 Its primary control signals include:
 
 - **CE — Counter Enable:** advances the Program Counter
 - **CO — Counter Out:** places the counter value onto the appropriate data path
 
-During instruction fetching, the Program Counter supplies the address of the instruction to be accessed from memory.
+During instruction fetching, the Program Counter supplies the 3-bit address of the next instruction to be accessed from memory.
 
-![Program Counter](results/figures/program_counter.png)
+![Program Counter](results/figures/modules/program_counter.png)
 
 ---
 
 ### 5.3 Input Unit
 
-The Input Unit provides the mechanism for entering information into the memory subsystem during programming.
+The Input Unit provides the mechanism for manually entering information into the memory subsystem during programming.
 
-It works together with the Address Selector to allow memory locations and corresponding data to be configured before program execution.
+It provides:
 
-![Input Unit](results/figures/input_unit.png)
+- **6 data bits** for the value to be written to memory
+- **3 address bits** for selecting one of the eight memory locations
+- a **Read/Write control** for memory programming
+
+It works together with the Address Selector to allow memory locations and their corresponding 6-bit data values to be configured before program execution.
+
+![Input Unit](results/figures/modules/input_unit.png)
 
 ---
 
 ### 5.4 Address Selector
 
-The Address Selector determines which address source is connected to the memory system.
+The Address Selector determines which **3-bit address source** is connected to the memory system.
 
 Depending on the operating mode, the memory address can originate from:
 
 - the Input Unit during programming, or
-- the Memory Address Register during execution.
+- the Memory Address Register during program execution.
 
 This allows the same RAM subsystem to support both program loading and program execution.
 
-![Address Selector](results/figures/address_selector.png)
+![Address Selector](results/figures/modules/address_selector.png)
 
 ---
 
 ### 5.5 Memory Address Register (MAR)
 
-The Memory Address Register stores the address of the RAM location currently being accessed.
+The **3-bit Memory Address Register (MAR)** stores the address of the RAM location currently being accessed.
+
+Since the system contains eight addressable memory locations, the MAR uses a 3-bit address ranging from `000` to `111`.
 
 During program execution, an address can be transferred to the MAR as part of either the instruction-fetch process or an instruction requiring memory access.
 
 The **MI (Memory Address In)** control signal enables the MAR to capture the required address.
 
-![Memory Address Register](results/figures/mar.png)
+![Memory Address Register](results/figures/modules/mar.png)
 
 ---
 
 ### 5.6 Random Access Memory (RAM)
 
-The RAM stores the instructions and data required during program execution.
+The computer uses an **8×6-bit RAM**, providing eight addressable memory locations with six bits stored at each location.
 
-The selected memory location is determined by the address supplied through the memory-addressing circuitry.
+The memory organization is therefore:
 
-The **RO (RAM Out)** control signal enables the contents of the selected memory location to participate in a data transfer.
+- **Address width:** 3 bits
+- **Number of memory locations:** 8
+- **Word size:** 6 bits
+- **Total organization:** 8×6 bits
 
-![Random Access Memory](results/figures/ram.png)
+The selected memory location is determined by the 3-bit address supplied through the memory-addressing circuitry.
+
+The **RO (RAM Out)** control signal enables the 6-bit contents of the selected memory location to participate in a data transfer.
+
+![Random Access Memory](results/figures/modules/ram.png)
 
 ---
 
@@ -239,7 +256,7 @@ Its primary control signals include:
 
 AI allows the Accumulator to capture incoming data, while AO enables its stored value to participate in a bus transfer.
 
-![Accumulator](results/figures/accumulator.png)
+![Accumulator](results/figures/modules/accumulator.png)
 
 ---
 
@@ -251,7 +268,7 @@ During arithmetic instructions, data retrieved from memory can be loaded into th
 
 The **BI (B Register In)** control signal enables data to be loaded into the register.
 
-![B Register](results/figures/b_register.png)
+![B Register](results/figures/modules/b_register.png)
 
 ---
 
@@ -275,24 +292,27 @@ When subtraction is selected, the appropriate complement/carry behavior is intro
 
 EO enables the ALU result to be transferred for subsequent storage or processing.
 
-![6-Bit Arithmetic and Logic Unit](results/figures/alu.png)
+![6-Bit Arithmetic and Logic Unit](results/figures/modules/alu.png)
 
 ---
 
 ### 5.10 Instruction Register
 
-The Instruction Register stores the instruction retrieved from RAM during the fetch process.
+The **6-bit Instruction Register** stores the instruction retrieved from RAM during the fetch process.
 
-The stored instruction provides the information required by the control circuitry to determine the operation to be executed and, where applicable, the associated memory address.
+The stored 6-bit instruction is divided into two 3-bit fields:
+
+- the **upper 3 bits** represent the operation code (opcode), which is supplied to the Controller-Sequencer, and
+- the **lower 3 bits** represent the memory address associated with the instruction when required.
 
 Relevant control signals include:
 
 - **II — Instruction Register In**
 - **IO — Instruction Register Out**
 
-II loads an instruction into the register, while IO enables the required instruction information to participate in subsequent operations.
+II loads the 6-bit instruction into the register, while IO enables the 3-bit address portion of the instruction to participate in subsequent memory-addressing operations.
 
-![Instruction Register](results/figures/instruction_register.png)
+![Instruction Register](results/figures/modules/instruction_register.png)
 
 ---
 
@@ -310,7 +330,7 @@ CE  CO  MI  RO  II  IO  AI  AO  SU  EO  BI  OI
 
 A separate **HLT** signal is used for halting program execution.
 
-![Controller-Sequencer](results/figures/control_sequencer.png)
+![Controller-Sequencer](results/figures/modules/control_sequencer.png)
 
 ---
 
@@ -322,7 +342,7 @@ The **OI (Output In)** control signal enables the register to capture the approp
 
 The stored result can subsequently be presented through the associated output/display circuitry.
 
-![Output Register](results/figures/output_register.png)
+![Output Register](results/figures/modules/output_register.png)
 
 ---
 
@@ -419,7 +439,7 @@ This sequencing coordinates memory access, register transfers, arithmetic operat
 
 After the individual modules were designed and tested, they were connected to form the complete 6-bit SAP-1 computer.
 
-![Complete 6-Bit SAP-1 Computer](results/figures/final_system.png)
+![Complete 6-Bit SAP-1 Computer](results/figures/final-system/final_system.png)
 
 The final integrated design combines:
 
@@ -447,27 +467,54 @@ Each functional module was designed and simulated individually before complete s
 
 This modular development approach allowed individual components to be verified independently before connecting them to the complete architecture.
 
-The repository includes screenshots of all individual Proteus modules as well as the final integrated system.
+### 11.1 Module Simulation Screenshots
 
-### Module Simulation Screenshots
+The repository includes Proteus schematic/simulation views of all twelve individual functional modules.
 
 | Module | Screenshot |
 |---|---|
-| Address Selector | [View](results/figures/address_selector.png) |
-| Accumulator | [View](results/figures/accumulator.png) |
-| ALU | [View](results/figures/alu.png) |
-| B Register | [View](results/figures/b_register.png) |
-| Clock Pulse Generator | [View](results/figures/clock.png) |
-| Controller-Sequencer | [View](results/figures/control_sequencer.png) |
-| Input Unit | [View](results/figures/input_unit.png) |
-| Instruction Register | [View](results/figures/instruction_register.png) |
-| Memory Address Register | [View](results/figures/mar.png) |
-| Output Register | [View](results/figures/output_register.png) |
-| Program Counter | [View](results/figures/program_counter.png) |
-| RAM | [View](results/figures/ram.png) |
-| Complete SAP-1 Computer | [View](results/figures/final_system.png) |
+| Address Selector | [View](results/figures/modules/address_selector.png) |
+| Accumulator | [View](results/figures/modules/accumulator.png) |
+| ALU | [View](results/figures/modules/alu.png) |
+| B Register | [View](results/figures/modules/b_register.png) |
+| Clock Pulse Generator | [View](results/figures/modules/clock.png) |
+| Controller-Sequencer | [View](results/figures/modules/control_sequencer.png) |
+| Input Unit | [View](results/figures/modules/input_unit.png) |
+| Instruction Register | [View](results/figures/modules/instruction_register.png) |
+| Memory Address Register | [View](results/figures/modules/mar.png) |
+| Output Register | [View](results/figures/modules/output_register.png) |
+| Program Counter | [View](results/figures/modules/program_counter.png) |
+| RAM | [View](results/figures/modules/ram.png) |
 
-The individual screenshots provide a direct view of the circuit-level implementation without requiring Proteus to inspect the architecture.
+### 11.2 PCB Design and Layout
+
+In addition to schematic-level design and simulation, PCB layouts were developed for multiple modules of the SAP-1 computer.
+
+The PCB design stage translated the digital schematics into physical board layouts by defining component placement, electrical connectivity, board dimensions, and copper routing. Double-sided routing was used where required, with traces distributed across the top and bottom copper layers.
+
+The repository includes PCB-layout screenshots for all twelve major functional modules developed during the project.
+
+These layouts document the transition from schematic-level circuit design to physical PCB implementation. Several of these PCB layouts also represent a significant part of my individual contribution to the project, as detailed in the Contributors and Individual Contribution section.
+
+#### Example PCB Layouts
+
+**Accumulator PCB Layout**
+
+![Accumulator PCB Layout](results/figures/pcb-layouts/accumulator_pcb.png)
+
+**ALU PCB Layout**
+
+![ALU PCB Layout](results/figures/pcb-layouts/alu_pcb.png)
+
+Additional PCB layouts are available in the repository under [`results/figures/pcb-layouts/`](results/figures/pcb-layouts/).
+
+### 11.3 Final Integrated System
+
+Following individual module development and verification, the modules were interconnected to form the complete 6-bit SAP-1 computer.
+
+The final Proteus implementation integrates the 3-bit addressing subsystem, 8×6-bit memory, 6-bit registers and datapath, ALU, Instruction Register, Controller-Sequencer, shared bus, and output circuitry.
+
+![Complete 6-Bit SAP-1 Computer](results/figures/final-system/final_system.png)
 
 ---
 
@@ -507,14 +554,17 @@ The complete integrated system is provided separately:
 - Digital logic design
 - Computer architecture
 - Register-transfer operations
-- Sequential logic
-- Combinational logic
+- Sequential and combinational logic
 - Shared-bus architecture
 - Binary arithmetic
 - Two's-complement subtraction
+- Memory addressing
 - Instruction sequencing
 - Control-unit design
-- PCB design
+- Schematic capture
+- PCB component placement
+- PCB routing
+- Double-sided PCB layout
 
 ### Representative Digital Components
 
@@ -599,22 +649,40 @@ sap-1-computer-proteus/
 │   ├── ReVOLT_Phase_A_B_Project_Report.pdf
 │   └── ReVOLT_Phase_C_D_E_Project_Report.pdf
 │
-└── results/
-    └── figures/
-        ├── system_architecture.png
-        ├── address_selector.png
-        ├── accumulator.png
-        ├── alu.png
-        ├── b_register.png
-        ├── clock.png
-        ├── control_sequencer.png
-        ├── input_unit.png
-        ├── instruction_register.png
-        ├── mar.png
-        ├── output_register.png
-        ├── program_counter.png
-        ├── ram.png
-        └── final_system.png
+├── results/
+│   └── figures/
+│       ├── system_architecture.png
+│       │
+│       ├── modules/
+│       │   ├── address_selector.png
+│       │   ├── accumulator.png
+│       │   ├── alu.png
+│       │   ├── b_register.png
+│       │   ├── clock.png
+│       │   ├── control_sequencer.png
+│       │   ├── input_unit.png
+│       │   ├── instruction_register.png
+│       │   ├── mar.png
+│       │   ├── output_register.png
+│       │   ├── program_counter.png
+│       │   └── ram.png
+│       │
+│       ├── pcb-layouts/
+│       │   ├── address_selector_pcb.png
+│       │   ├── accumulator_pcb.png
+│       │   ├── alu_pcb.png
+│       │   ├── b_register_pcb.png
+│       │   ├── clock_pcb.png
+│       │   ├── control_sequencer_pcb.png
+│       │   ├── input_unit_pcb.png
+│       │   ├── instruction_register_pcb.png
+│       │   ├── mar_pcb.png
+│       │   ├── output_register_pcb.png
+│       │   ├── program_counter_pcb.png
+│       │   └── ram_pcb.png
+│       │
+│       └── final-system/
+│           └── final_system.png
 ```
 
 ---
@@ -655,8 +723,8 @@ This project was developed collaboratively by **Team ReVOLT** at the **Islamic U
 
 - Mashrur Saad Emad
 - Sumaiya Aziz
-- Tashfia Islam
 - Mysha Rubaba
+- Tashfia Islam
 - Taufeeq Hassan Omio
 - Ishrak Anan
 - Nafis Islam Fardin
@@ -667,17 +735,25 @@ This project was developed collaboratively by **Team ReVOLT** at the **Islamic U
 
 My documented contributions across the project phases included:
 
-- Accumulator implementation
-- Instruction Register implementation
-- PCB design/layout of the Program Counter
-- PCB design/layout of the Accumulator
-- PCB design/layout of the B Register
-- PCB design/layout of the Output Register
-- PCB design/layout of the Instruction Register
-- PCB design/layout of the ALU
+**Module Implementation**
+- Program Counter
+- Accumulator
+- Instruction Register
+
+**PCB Design/Layout**
+- Program Counter
+- Accumulator
+- B Register
+- Output Register
+- Instruction Register
+- ALU
+
+**Documentation**
 - Project report preparation
 
 The complete SAP-1 computer was developed collaboratively by Team ReVOLT, while the items above represent my individually documented contributions to the project.
+
+The corresponding PCB-layout results are available under [`results/figures/pcb-layouts/`](results/figures/pcb-layouts/).
 
 ---
 
